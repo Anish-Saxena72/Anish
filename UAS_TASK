@@ -1,0 +1,131 @@
+import cv2 as cv
+import numpy as np
+
+img = cv.imread("images/2.png") 
+output = img.copy()
+gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+h, w = img.shape[:2]
+image_area = h * w
+
+# Land and ocean identification 
+lab = cv.cvtColor(img, cv.COLOR_BGR2LAB)
+mask1 = cv.inRange(lab, (0,100,0), (120,255,120))
+mask2 = cv.inRange(img, (0, 100, 0), (100, 255, 100))
+
+ocean = cv.bitwise_and(img, img, mask=mask1)
+land = cv.bitwise_and(img, img, mask=mask2)
+
+_,thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+contours,_= cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+severe= {"Safe":1, "Mild":2, "Severe":3}
+ages = {"Kid":3, "Adult":1, "Elder":2} 
+
+casualties = []
+pads = []
+
+for cnt in contours:
+    area = cv.contourArea(cnt)
+    if area > 0.1 * image_area:
+        break
+
+    approx = cv.approxPolyDP(cnt, 0.04*cv.arcLength(cnt, True), True)
+    sides = len(approx)
+
+    M = cv.moments(cnt)
+    cx = int(M["m10"]/M["m00"]) #Pixels along x / total pixels
+    cy = int(M["m01"]/M["m00"]) #Pixels along y / total pixels
+
+    # Color of casualty and pads
+    b,g,r = img[cy,cx]
+    if b>200 and g>155 and r>225:
+        color = "Pink"
+    elif g>200 and r>200 and b<100:
+        color = "Mild" #Yellow
+    elif g>r and g>b:
+        color = "Safe" #Green
+    elif r>250 and b>150 and g>150:
+        color = "Severe" #Red
+    elif b>r and b>g:
+        color = "Blue"
+    else:
+        color = "Grey"
+
+    if sides != 3 and sides !=4 and sides !=10: #Circles and not triangles, star or sqr.
+        pads.append([cx, cy, color]) 
+        cv.drawContours(output, [cnt], -1, (0,255,0),2) #Entire contour is outlined with green of thickness = 2
+        cv.putText(output,f"{color} Pad",(cx-30,cy-10),
+                    cv.FONT_HERSHEY_PLAIN,1.4,(0,0,0),1)
+    else:
+        if sides==3:
+            shape="Elder" #Triangle = Elder
+        elif sides==4:
+            shape="Adult" #Square = Adult
+        elif sides==10:
+            shape="Kid" #Star = Kid
+
+        casualties.append([cx,cy,shape,color]) #Casualty
+        cv.drawContours(output,[cnt],-1,(255,0,0),2) #Entire contour is outlined with blue of thickness = 2
+        cv.putText(output,f"{shape}-{color}",(cx-30,cy-10),
+                   cv.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
+
+priority_list = [] # assigned of (priority, casualty_index, pad_index)
+for i in range(len(casualties)):
+    c = casualties[i]              # pick casualty by index
+    cx, cy, shape, color = c
+    severity = severe.get(color)
+    age_factor = ages.get(shape)
+
+    for j in range(len(pads)):
+        p = pads[j]                # pick pad by index
+        px, py, pad_color = p
+        dist_root = np.sqrt(np.sqrt((cx-px)**2 + (cy-py)**2))
+        priority = (severity*age_factor)/dist_root
+        priority_list.append((priority,i,j))
+
+priority_list.sort(reverse=True,key=lambda x:x[0]) #Arrange 
+
+# ----------------- Assign pads respecting capacity -----------------
+pad_capacity = {"Blue":4,"Pink":3,"Grey":2}
+pad_count = {"Blue":0,"Pink":0,"Grey":0}
+assigned_casualty = {}
+pad_points = {"Blue":0,"Pink":0,"Grey":0}  # total points per pad
+
+for prio, ci, pi in priority_list:
+    if ci in assigned_casualty:
+        continue
+    pad_color = pads[pi][2]
+    if pad_count.get(pad_color,0) < pad_capacity.get(pad_color,0):
+        assigned_casualty[ci]=pi
+        pad_count[pad_color]+=1
+        pad_points[pad_color]+=prio  # sum priority points
+
+assigned = []
+for i, c in enumerate(casualties): 
+    cx,cy,shape,color = c
+    if i in assigned_casualty:
+        pi = assigned_casualty[i]
+        px,py,pad_color = pads[pi]
+        assigned.append(pad_color)
+        cv.line(output,(cx,cy),(px,py),(0,0,255),2)
+
+print("Casualty | Age | Condition | Assigned Pad") #Table
+for i,c in enumerate(casualties):
+    print(f"{i+1:} | {c[2]:} | {c[3]:} | {assigned[i]:}")
+
+print("Total Priority Points per Pad:") #Total priority points
+for pad_color, points in pad_points.items():
+    print(f"{pad_color}: {points:.2f}") #Adding total points per pad
+
+print("Average Priority Points per Pad:") #Average priority points
+for pad_color, points in pad_points.items():
+   avg = pad_points[pad_color] / pad_count[pad_color] #average = totalpoints/no. of casualty assign
+   print(f"{pad_color}: {avg:.2f}")
+
+
+cv.imshow("Original", img)
+cv.imshow("Land", land)
+cv.imshow("Ocean", ocean)
+cv.imshow("Final",output)
+cv.waitKey(0)
+cv.destroyAllWindows()
