@@ -1,0 +1,28 @@
+#include <stdio.h>
+
+int main()
+{
+    char arr[289];
+    int b;
+    for (int n = 0; n <= 289; n++){
+        arr[n] = ' ';
+    }
+    for (int y = -8; y <= 8; y++){
+        for (int x = -8; x <= 8; x++){
+            if ((y==2*x)){
+                b = 144 + x - (17 * y);
+                arr[b] = '*';
+            }
+        }
+    }
+    for (int k = 0; k <= 289; k++){
+        if (k % 17 == 0){
+            printf("\n");
+        }
+        printf("%c", arr[k]);
+        if(arr[k]!='*'){
+            printf("%c", arr[k]);
+        }
+    }
+    return 0;
+}
