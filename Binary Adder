@@ -1,0 +1,53 @@
+#include <stdio.h>
+//Didn't knew arrays, strings, functions
+
+int main(){
+    int a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,t,u,v,w,x,y,z, a1, a2 ;
+    printf("Enter 1st 4-digit binary no.- ");
+    scanf("%d", &a);
+
+    printf("Enter 2nd 4-digit binary no.- ");
+    scanf("%d", &b);
+
+    c=(a-(a%1000))/1000;
+    d=(a%1000);
+    e=(d-(d%100))/100;
+    f=(d%100);
+    g=(f-(f%10))/10;
+    h=(f%10);
+
+    t=(b-(b%1000))/1000;
+    u=(b%1000);
+    v=(u-(u%100))/100;
+    w=(u%100);
+    x=(w-(w%10))/10;
+    y=(w%10);
+
+    i=(8*c)+(4*e)+(2*g)+h;
+    j=(8*t)+(4*v)+(2*x)+y;
+
+    k=i+j;
+
+    l=(k-(k%16))/16;
+    m=(k%16);
+    n=(m-(m%8))/8;
+    o=(m%8);
+    p=(o-(o%4))/4;
+    q=(o%4);
+    a1=(q-(q%2))/2;
+    a2=(q%2);
+    
+    if((c!=(0||1)) && (g!=(0||1)) && (e!=(0||1) && (h!=(0||1)) && (t!=(0||1)) && (v!=(0||1)) && (x!=(0||1)) && (y!=(0||1))))
+        printf("The no. isn't Binary");
+    else {
+        if(k>31)
+        printf("Sorry no. is too large");
+    else
+    {
+        printf("The sum of %d and %d is %d%d%d%d\n\n", a, b,l,n,p,a1,a2);
+        printf("The sum of %d and %d is %d", i ,j ,k);
+
+    }
+}
+    return 0;
+}
